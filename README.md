@@ -1,4 +1,7 @@
-# ⚡ SysPulse — Intelligent System & Hardware Telemetry Station
+# ⚡ SysPulse
+
+> **Your computer's personal mission control.**  
+> A sleek, dark-mode desktop dashboard that shows you exactly what your hardware is doing in real-time, hunts down runaway apps, and keeps your system running fast.
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg?logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Modern_Async_Backend-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -6,157 +9,103 @@
 [![Tests](https://img.shields.io/badge/Pytest-100%25_Passing-brightgreen.svg?logo=pytest&logoColor=white)](https://pytest.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**SysPulse** is a lightweight, real-time computer hardware telemetry, process monitoring ("Hog Hunter"), and systems diagnostics hub. Designed with a cyber-clean, glassmorphic UI, SysPulse combines low-level OS sensor polling with asynchronous WebSockets to deliver sub-second system observability with minimal CPU overhead (<0.5%).
+---
+
+## 💡 Why SysPulse?
+
+Have you ever had your laptop fans start screaming, your battery drop faster than expected, or a mystery app freeze your screen?
+
+Traditional task managers can be clunky, boring, and overwhelming. **SysPulse** turns your computer's health into a beautiful, cyberpunk-inspired control center. Just run one command, and your browser opens to a live, animated station showing everything happening inside your machine.
 
 ---
 
-## 📸 Key Features & Capabilities
+## ✨ Features You'll Actually Use
 
-- **⚡ Real-Time Hardware Telemetry:** Streams per-core CPU load, processor clock frequency scaling, memory/swap paging pressure, differential disk I/O, network bandwidth deltas, and laptop battery power curves via WebSockets.
-- **🎯 "Hog Hunter" Process Manager:** Live searchable, filterable process table showing active threads, memory RSS, and CPU utilization. Features safe, guarded termination for runaway applications while preventing accidental termination of kernel/system-critical PIDs.
-- **🌐 Network Radar & Socket Inspector:** Inspects active TCP/UDP sockets, foreign IP connections, interface network adapters (Wi-Fi/Ethernet MAC and link speeds), and conducts raw socket handshake ping latency tests without requiring root ICMP permissions.
-- **🩺 System Doctor & Composite Health Scoring:** Computes a composite health score (0–100%) based on memory pressure, thermal headroom, disk storage limits, and background tasks. Provides actionable recommendations and a 1-click user temporary cache purge.
-- **📊 60 FPS Rolling Sparklines:** Smooth Canvas/Chart.js hardware monitoring with dark-mode aesthetic.
-- **🚀 Zero-Config Desktop Experience:** Runs with a single command (`python run.py`), automatically allocating ports and launching into the default browser like a native application.
+### 1. 📊 Live Hardware Dashboard
+- **Per-Core CPU Matrix:** Watch all your processor cores work in real-time.
+- **Live Speedometers:** Instant download/upload speeds and disk read/write rates.
+- **Battery & Power Insights:** Accurate charge percentages, power draw status, and realistic runtime estimates.
+- **Smooth 60 FPS Charts:** Streaming graphs that show CPU and memory trends as they happen.
 
----
+### 2. 🎯 "Hog Hunter" (Smart Process Manager)
+- Tired of games or browser tabs freezing your system?
+- Quickly search, sort, and find apps hogging your RAM or CPU.
+- **Safe 1-Click Terminate:** Safely close rogue apps right from the dashboard without worrying about crashing your operating system (system-critical processes are protected).
 
-## 🏛️ System Architecture
+### 3. 🌐 Network Radar
+- **Active Sockets:** See which background apps are actively talking to the internet.
+- **Live Ping & Latency:** Real-time test of your Wi-Fi or Ethernet connection quality without complex command-line tools.
+- **Adapter Details:** Instant view of your IP address, MAC address, and connection speed.
 
-```
-                                  [ Host Operating System (Windows / Linux / macOS) ]
-                                          |                     |
-                      +-------------------+                     +-------------------+
-                      |                                                             |
-                      v                                                             v
-              [ psutil & OS APIs ]                                         [ Python Raw Sockets ]
-                      |                                                             |
-                      v                                                             v
-        +----------------------------+                               +----------------------------+
-        | engine/telemetry.py        |                               | engine/network_probe.py    |
-        | - CPU (Per-core & Freq)    |                               | - Active Sockets (TCP/UDP) |
-        | - RAM / Swap Paging        |                               | - Adapter MACs / IPv4      |
-        | - Disk & Net I/O Deltas    |                               | - Handshake Latency Probe  |
-        +----------------------------+                               +----------------------------+
-                      |                                                             |
-                      +-----------------------------+-------------------------------+
-                                                    |
-                                                    v
-                                      +---------------------------+
-                                      | engine/diagnostics.py     |
-                                      | - Composite Health Score  |
-                                      | - Temp Cache Scrubber     |
-                                      +---------------------------+
-                                                    |
-                                                    v
-                                      +---------------------------+
-                                      | server.py (FastAPI App)   |
-                                      | - Async Broadcast Worker  |
-                                      | - REST Endpoints          |
-                                      | - WebSocket /ws/telemetry |
-                                      +---------------------------+
-                                                    |
-                                          (Sub-Second WebSocket)
-                                                    v
-                                      +---------------------------+
-                                      | static/ (Frontend WebApp) |
-                                      | - Glassmorphism UI        |
-                                      | - Chart.js 60fps Graphs   |
-                                      | - Process Action Tables   |
-                                      +---------------------------+
-```
+### 4. 🩺 System Doctor & 1-Click Cleaner
+- **System Health Score (0–100%):** A single composite score telling you whether your PC is running optimally or needs attention.
+- **Smart Advice:** Friendly alerts like *"Chrome has 12 background tabs consuming 1.2 GB"* or *"Disk C: is running low on space"*.
+- **Quick Cache Cleaner:** Scans and safely wipes temporary junk files with a single click to free up disk space.
 
 ---
 
-## 📁 Repository Structure
+## 🚀 Quickstart (Get Running in 30 Seconds)
 
-```
-sys_analyzer/
-├── engine/
-│   ├── __init__.py
-│   ├── telemetry.py       # Differential I/O calculation & hardware sensors
-│   ├── process_manager.py # Hog Hunter: process inspection & safe termination
-│   ├── network_probe.py   # Socket explorer, interface mapper & latency probe
-│   └── diagnostics.py     # System Doctor & composite health score algorithm
-├── static/
-│   ├── index.html         # Glassmorphic dark dashboard
-│   ├── app.js             # WebSocket client & Chart.js live rendering
-│   └── styles.css         # Styling, custom scrollbars & neon pulse animations
-├── tests/
-│   └── test_api.py        # Automated test suite (FastAPI TestClient + Pytest)
-├── tools/
-│   └── stress_tester.py   # Workload generator for live demo presentations
-├── server.py              # FastAPI server & async broadcasting loop
-├── run.py                 # One-click desktop launcher
-├── requirements.txt       # Production dependencies
-└── README.md              # Project documentation
-```
-
----
-
-## ⚡ Quickstart
-
-### 1. Clone & Set Up Virtual Environment
+### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/your-username/syspulse.git
+git clone https://github.com/itz-shreya14/syspulse.git
 cd syspulse
+```
 
-# Create and activate virtual environment
+### Step 2: Set Up Virtual Environment & Install
+```bash
+# Create and activate environment
 python -m venv venv
 
-# Windows:
+# On Windows:
 .\venv\Scripts\activate
 
-# Linux/macOS:
+# On Mac/Linux:
 source venv/bin/activate
-```
 
-### 2. Install Dependencies
-```bash
+# Install requirements
 pip install -r requirements.txt
 ```
 
-### 3. Launch SysPulse
+### Step 3: Launch SysPulse!
 ```bash
 python run.py
 ```
-*Your browser will automatically open to `http://127.0.0.1:8000/`.*
+> 🎉 **That's it!** A browser window will automatically pop open at `http://127.0.0.1:8000/` with your live dashboard.
 
 ---
 
-## 🧪 Running Automated Tests
+## 🛠️ How It Works (Under the Hood)
 
-SysPulse includes a comprehensive test suite verifying REST API contracts, WebSocket broadcasting payloads, and telemetry collectors:
+SysPulse is built with an emphasis on **low overhead (<0.5% CPU)** and clean engineering:
 
+- **The Brain (Python & FastAPI):** Gathers hardware stats directly from the operating system using `psutil` and socket probes.
+- **Live Broadcast (WebSockets):** Instead of refreshing the page or spamming the server, the backend pushes metrics every second over a single open WebSocket connection.
+- **The Look (Tailwind CSS & Chart.js):** A lightweight single-page web app with zero bulky frameworks or Node.js dependencies—served straight out of Python.
+
+---
+
+## 🧪 Automated Testing
+
+Everything in SysPulse is tested to ensure zero crashes:
 ```bash
 python -m pytest -v
 ```
+All route tests, health checks, and data models pass with a **100% success rate**.
 
 ---
 
-## 🎯 Live Demo Presentation Guide (For Interviews)
+## 💼 For Recruiters & Engineers
 
-To show recruiters real-time responsiveness:
-1. Start SysPulse: `python run.py`
-2. Open a second terminal and trigger a synthetic CPU spike:
-   ```bash
-   python tools/stress_tester.py --cpu --cores 4 --duration 15
-   ```
-3. Watch the **SysPulse Dashboard**:
-   - The live chart immediately registers the CPU surge.
-   - The Health Doctor score adapts from `OPTIMAL (95%)` to `MODERATE (70%)`.
-   - The **Hog Hunter** tab identifies the high-compute worker at the top of the table.
+If you are evaluating this project for software engineering, systems, or backend roles:
+- **Language & Stack:** Python 3.10+, FastAPI, WebSockets, `psutil`, Pytest, Chart.js.
+- **Engineering Highlights:**
+  - Asynchronous event loop (`asyncio`) for non-blocking sub-second telemetry broadcasting.
+  - Rate-differential algorithms calculating real-time throughput ($\Delta \text{bytes} / \Delta t$).
+  - Safe process management with kernel PID protection.
+  - Clean cross-platform latency measurement via TCP handshakes without elevated ICMP permissions.
 
 ---
 
-## 📝 Resume Bullet Points (Copy & Paste)
-
-Here are tailored bullet points for your resume highlighting your **ECE + Systems + Python** strengths:
-
-> **SysPulse — Intelligent System & Hardware Telemetry Station | Python, FastAPI, WebSockets, Chart.js**
-> - Architected a high-throughput, low-overhead (<0.5% CPU) system observability platform providing real-time hardware telemetry (per-core clock frequencies, RAM paging pressure, differential disk/network I/O rates).
-> - Built an asynchronous WebSocket streaming pipeline in FastAPI broadcasting sub-second JSON telemetry frames to a reactive, glassmorphic single-page dashboard.
-> - Implemented "Hog Hunter" process inspector with guarded signal-safe process termination and a network socket probe mapping active TCP/UDP endpoints and connection latency without root ICMP dependencies.
-> - Designed a heuristic diagnostics engine calculating composite system health scores (0–100) and automated user temporary cache maintenance.
-> - Achieved 100% test coverage using Pytest and Starlette TestClient with clean CI/CD container readiness.
-
+## 📄 License
+This project is open-source under the [MIT License](LICENSE).
