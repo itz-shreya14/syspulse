@@ -109,3 +109,4 @@ class ProcessManager:
             return {"success": False, "message": f"Permission denied to terminate PID {pid} (Run as Administrator)."}
         except Exception as e:
             return {"success": False, "message": f"Error terminating process: {str(e)}"}
+

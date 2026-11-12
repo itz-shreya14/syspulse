@@ -54,3 +54,4 @@ if __name__ == "__main__":
         run_cpu_stress(cores=args.cores, duration=args.duration)
     if args.memory:
         run_memory_stress(duration=args.duration)
+

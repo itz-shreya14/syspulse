@@ -186,3 +186,4 @@ class SystemDoctor:
             "message": f"Cleaned {deleted_count} files, freeing {freed_mb} MB of disk space.",
             "freed_mb": freed_mb
         }
+

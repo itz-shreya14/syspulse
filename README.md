@@ -159,3 +159,4 @@ Here are tailored bullet points for your resume highlighting your **ECE + System
 > - Implemented "Hog Hunter" process inspector with guarded signal-safe process termination and a network socket probe mapping active TCP/UDP endpoints and connection latency without root ICMP dependencies.
 > - Designed a heuristic diagnostics engine calculating composite system health scores (0–100) and automated user temporary cache maintenance.
 > - Achieved 100% test coverage using Pytest and Starlette TestClient with clean CI/CD container readiness.
+

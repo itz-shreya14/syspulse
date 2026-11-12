@@ -103,3 +103,4 @@ class NetworkProbe:
             return round(latency_ms, 1)
         except Exception:
             return None
+

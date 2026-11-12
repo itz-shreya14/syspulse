@@ -51,3 +51,4 @@ def test_diagnostics_endpoints():
     r_cache = client.get("/api/diagnostics/cache")
     assert r_cache.status_code == 200
     assert "size_mb" in r_cache.json()
+

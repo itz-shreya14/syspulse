@@ -10,3 +10,4 @@
 - **Cross-Platform Latency Tests**: Prefer non-elevated TCP socket handshake timings over ICMP ping utilities to avoid permission failures across environments.
 - **Guarded Process Management**: Always whitelist and block termination of core OS PIDs (0, 4) and critical system processes (`csrss.exe`, `smss.exe`, `services.exe`, etc.).
 - **Python Test Invocation**: Always execute test suites via `python -m pytest` to guarantee root workspace inclusion in `sys.path`.
+
