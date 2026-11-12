@@ -1,9 +1,10 @@
 import asyncio
 import os
+from datetime import datetime
 from contextlib import asynccontextmanager
 from typing import Set, Dict, Any
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, Response
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -12,6 +13,7 @@ from engine.telemetry import TelemetryCollector
 from engine.process_manager import ProcessManager
 from engine.network_probe import NetworkProbe
 from engine.diagnostics import SystemDoctor
+from engine.pdf_report import PDFReportGenerator
 
 # Global Singletons
 collector = TelemetryCollector()
@@ -179,6 +181,30 @@ async def get_cache_info():
 async def clean_temp_cache():
     """Safely purge unlocked files from the user temp cache."""
     return SystemDoctor.clean_cache()
+
+
+@app.get("/api/reports/pdf")
+async def get_pdf_report():
+    """Generates and downloads a vectorized executive PDF diagnostic audit report."""
+    telemetry = collector.collect()
+    procs = ProcessManager.get_processes(sort_by="memory", limit=20)
+    health = SystemDoctor.evaluate(telemetry, procs)
+    network_data = {
+        "interfaces": NetworkProbe.get_interfaces(),
+        "latency_ms": NetworkProbe.measure_latency()
+    }
+
+    pdf_buffer = PDFReportGenerator.generate(telemetry, health, procs, network_data)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"syspulse_audit_report_{timestamp}.pdf"
+
+    return Response(
+        content=pdf_buffer.getvalue(),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
+    )
 
 
 # --- WebSocket Streaming ---

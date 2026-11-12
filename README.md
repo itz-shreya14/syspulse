@@ -41,6 +41,7 @@ Traditional task managers can be clunky, boring, and overwhelming. **SysPulse** 
 - **System Health Score (0–100%):** A single composite score telling you whether your PC is running optimally or needs attention.
 - **Smart Advice:** Friendly alerts like *"Chrome has 12 background tabs consuming 1.2 GB"* or *"Disk C: is running low on space"*.
 - **Quick Cache Cleaner:** Scans and safely wipes temporary junk files with a single click to free up disk space.
+- **📄 Downloadable Executive PDF Report:** Generates and downloads a clean, vectorized PDF diagnostic report summarizing system specs, health findings, disk allocation, and top active processes.
 
 ---
 

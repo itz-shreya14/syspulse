@@ -52,3 +52,11 @@ def test_diagnostics_endpoints():
     assert r_cache.status_code == 200
     assert "size_mb" in r_cache.json()
 
+def test_pdf_report_endpoint():
+    response = client.get("/api/reports/pdf")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+    assert "syspulse_audit_report" in response.headers.get("content-disposition", "")
+    assert len(response.content) > 1000
+    assert response.content.startswith(b"%PDF")
+

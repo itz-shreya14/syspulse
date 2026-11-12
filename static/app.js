@@ -547,6 +547,37 @@ async function executeCacheClean() {
   }
 }
 
+async function downloadPdfReport() {
+  const btn = document.getElementById('download-pdf-btn');
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Generating PDF...`;
+  lucide.createIcons();
+
+  try {
+    showToast('Compiling system telemetry audit PDF...', 'info');
+    const res = await fetch('/api/reports/pdf');
+    if (!res.ok) throw new Error('Server returned error compiling PDF');
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `syspulse_audit_report_${Date.now()}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('PDF audit report downloaded successfully!', 'success');
+  } catch (e) {
+    showToast(`Failed to generate PDF: ${e.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+    lucide.createIcons();
+  }
+}
+
 async function exportDiagnosticReport() {
   try {
     const res = await fetch('/api/snapshot');

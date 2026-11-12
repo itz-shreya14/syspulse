@@ -503,18 +503,28 @@
           <!-- Diagnostic Export Box -->
           <div class="glass-panel p-5 rounded-2xl border border-slate-800 space-y-3">
             <h3 class="text-sm font-semibold text-white flex items-center gap-2">
-              <i data-lucide="file-down" class="w-4 h-4 text-cyan-400"></i>
-              Diagnostic Report Export
+              <i data-lucide="file-text" class="w-4 h-4 text-cyan-400"></i>
+              System Diagnostic Reports
             </h3>
             <p class="text-xs text-slate-400">
-              Generate and download a comprehensive JSON snapshot of hardware telemetry, open sockets, and system metrics.
+              Download an executive PDF audit report with hardware specs, active processes, health findings, and storage metrics.
             </p>
+            
+            <button 
+              id="download-pdf-btn"
+              onclick="downloadPdfReport()" 
+              class="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 transition-all"
+            >
+              <i data-lucide="file-down" class="w-4 h-4"></i>
+              Download PDF Report (.pdf)
+            </button>
+
             <button 
               onclick="exportDiagnosticReport()" 
-              class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-medium text-xs flex items-center justify-center gap-2 transition-all"
+              class="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-medium text-xs flex items-center justify-center gap-2 transition-all"
             >
-              <i data-lucide="download" class="w-4 h-4"></i>
-              Export Report (.json)
+              <i data-lucide="code" class="w-3.5 h-3.5 text-slate-400"></i>
+              Export Raw Data (.json)
             </button>
           </div>
 
