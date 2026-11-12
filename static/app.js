@@ -6,6 +6,9 @@ let liveChart = null;
 let currentSort = 'memory';
 let pendingKillPid = null;
 let pendingKillName = '';
+let currentWsPath = '/ws/telemetry';
+let currentPin = '';
+let pairedDeviceName = '';
 
 const CHART_MAX_POINTS = 25;
 
@@ -134,8 +137,12 @@ function updateChart(timestamp, cpuVal, ramVal) {
 
 // --- WebSocket Streaming ---
 function initWebSocket() {
+  if (telemetrySocket) {
+    try { telemetrySocket.close(); } catch (e) {}
+  }
+
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/ws/telemetry`;
+  const wsUrl = `${protocol}//${window.location.host}${currentWsPath}`;
 
   telemetrySocket = new WebSocket(wsUrl);
 
@@ -144,7 +151,7 @@ function initWebSocket() {
 
   telemetrySocket.onopen = () => {
     indicator.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-active';
-    statusText.innerText = 'Live';
+    statusText.innerText = currentWsPath.includes('dashboard') ? 'Remote Live' : 'Live';
     statusText.className = 'text-emerald-400 font-medium';
   };
 
@@ -153,6 +160,8 @@ function initWebSocket() {
       const data = JSON.parse(event.data);
       if (data.type === 'telemetry_tick') {
         handleTelemetryTick(data);
+      } else if (data.type === 'agent_status') {
+        handleAgentStatusUpdate(data);
       }
     } catch (e) {
       console.error('Error parsing telemetry frame:', e);
@@ -163,11 +172,40 @@ function initWebSocket() {
     indicator.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
     statusText.innerText = 'Reconnecting...';
     statusText.className = 'text-rose-400 font-medium';
-    setTimeout(initWebSocket, 2000);
+    setTimeout(initWebSocket, 2500);
   };
 }
 
+function handleAgentStatusUpdate(data) {
+  const dot = document.getElementById('agent-status-dot');
+  const txt = document.getElementById('agent-status-text');
+  const actBtn = document.getElementById('activate-device-btn');
+
+  if (data.status === 'online') {
+    if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-active';
+    if (txt) txt.innerText = `Remote Agent is ONLINE and streaming!`;
+    if (actBtn) actBtn.classList.remove('hidden');
+    showToast(`Remote Agent connected for PIN ${data.pin}`, 'success');
+  } else if (data.status === 'offline') {
+    if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+    if (txt) txt.innerText = `Remote Agent disconnected.`;
+    showToast(`Remote Agent disconnected`, 'error');
+  } else {
+    if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500';
+    if (txt) txt.innerText = `Waiting for remote device to connect...`;
+  }
+}
+
 function handleTelemetryTick(data) {
+  // If remote device metadata is present
+  if (data.device_name) {
+    pairedDeviceName = data.device_name;
+    const specCpu = document.getElementById('spec-cpu');
+    if (specCpu) specCpu.innerText = `Remote: ${data.device_name}`;
+    const pairLabel = document.getElementById('pairing-btn-label');
+    if (pairLabel) pairLabel.innerText = `${data.device_name} (Live)`;
+  }
+
   // 1. CPU
   const cpuPct = data.cpu.overall_percent;
   document.getElementById('metric-cpu-val').innerText = cpuPct.toFixed(1);
@@ -207,6 +245,11 @@ function handleTelemetryTick(data) {
 
   // 7. Update Per-Core Matrix
   renderCoreMatrix(data.cpu.per_core_percent);
+
+  // 8. If remote telemetry includes top processes and active tab is procs, update table
+  if (data.top_processes && activeTab === 'procs') {
+    renderProcessTable(data.top_processes);
+  }
 }
 
 function formatRate(kbs) {
@@ -595,6 +638,85 @@ async function exportDiagnosticReport() {
   } catch (e) {
     showToast('Failed to export diagnostic report', 'error');
   }
+}
+
+// --- Fleet Hub Device Pairing ---
+async function openPairingModal() {
+  const modal = document.getElementById('pairing-modal');
+  modal.classList.remove('hidden');
+
+  if (!currentPin) {
+    try {
+      const res = await fetch('/api/device/new-pin');
+      const data = await res.json();
+      currentPin = data.pin;
+    } catch (e) {
+      currentPin = `${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}`;
+    }
+  }
+
+  document.getElementById('pairing-pin-display').innerText = currentPin;
+  const hubUrl = window.location.origin;
+  const cmd = `python agent.py --pin ${currentPin} --hub ${hubUrl}`;
+  document.getElementById('agent-command-code').innerText = cmd;
+
+  // Poll for agent status while modal is open
+  checkDeviceStatus();
+  lucide.createIcons();
+}
+
+function closePairingModal() {
+  document.getElementById('pairing-modal').classList.add('hidden');
+}
+
+async function checkDeviceStatus() {
+  if (!currentPin) return;
+  try {
+    const res = await fetch(`/api/device/${currentPin}/status`);
+    const data = await res.json();
+    const dot = document.getElementById('agent-status-dot');
+    const txt = document.getElementById('agent-status-text');
+    const actBtn = document.getElementById('activate-device-btn');
+
+    if (data.online) {
+      dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-active';
+      txt.innerText = 'Remote Device is ONLINE!';
+      actBtn.classList.remove('hidden');
+    } else {
+      dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500';
+      txt.innerText = 'Waiting for remote device to connect...';
+      actBtn.classList.add('hidden');
+    }
+  } catch (e) {}
+}
+
+function copyAgentCommand() {
+  const text = document.getElementById('agent-command-code').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Agent command copied to clipboard!', 'success');
+  }).catch(() => {
+    showToast('Copied to clipboard', 'info');
+  });
+}
+
+function connectToPairedDevice() {
+  if (!currentPin) return;
+  currentWsPath = `/ws/dashboard/${currentPin}`;
+  initWebSocket();
+  closePairingModal();
+  document.getElementById('pairing-btn-label').innerText = `PIN: ${currentPin}`;
+  showToast(`Dashboard connected to Device PIN ${currentPin}`, 'success');
+}
+
+function switchToLocalHost() {
+  currentWsPath = '/ws/telemetry';
+  currentPin = '';
+  pairedDeviceName = '';
+  initWebSocket();
+  fetchSystemSpecs();
+  closePairingModal();
+  document.getElementById('pairing-btn-label').innerText = 'Pair Device';
+  showToast('Switched back to Local Host Mode', 'info');
 }
 
 // --- Utilities ---

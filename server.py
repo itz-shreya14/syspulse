@@ -1,12 +1,14 @@
 import asyncio
 import os
+import random
 from datetime import datetime
 from contextlib import asynccontextmanager
-from typing import Set, Dict, Any
+from typing import Set, Dict, Any, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, Response
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from engine.telemetry import TelemetryCollector
@@ -18,6 +20,11 @@ from engine.pdf_report import PDFReportGenerator
 # Global Singletons
 collector = TelemetryCollector()
 connected_websockets: Set[WebSocket] = set()
+
+# Distributed Multi-Device Fleet Routing
+room_dashboards: Dict[str, Set[WebSocket]] = {}
+room_agents: Dict[str, WebSocket] = {}
+room_latest_telemetry: Dict[str, Dict[str, Any]] = {}
 
 # Asynchronous Background Broadcast Task
 async def telemetry_broadcast_loop():
@@ -84,6 +91,15 @@ app = FastAPI(
     description="Real-time OS telemetry, process manager, and hardware diagnostics platform.",
     version="1.0.0",
     lifespan=lifespan
+)
+
+# Enable CORS for cross-device & web accessibility
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Static file paths
@@ -207,20 +223,116 @@ async def get_pdf_report():
     )
 
 
+@app.get("/api/device/new-pin")
+async def generate_pairing_pin():
+    """Generates a unique 6-digit device pairing PIN."""
+    pin = f"{random.randint(100, 999)}-{random.randint(100, 999)}"
+    return {"pin": pin}
+
+
+@app.get("/api/device/{pin}/status")
+async def get_device_status(pin: str):
+    """Check if remote agent for a given PIN is actively connected."""
+    is_online = pin in room_agents
+    return {
+        "pin": pin,
+        "online": is_online,
+        "connected_dashboards": len(room_dashboards.get(pin, set())),
+        "has_cached_telemetry": pin in room_latest_telemetry
+    }
+
+
 # --- WebSocket Streaming ---
 
 @app.websocket("/ws/telemetry")
 async def websocket_telemetry_endpoint(websocket: WebSocket):
     """
-    Subscribes client to real-time, low-overhead system telemetry frames.
+    Subscribes client to real-time local system telemetry frames (standalone mode).
     """
     await websocket.accept()
     connected_websockets.add(websocket)
     try:
-        # Keep connection open; receive any client commands/pings if needed
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
         pass
     finally:
         connected_websockets.discard(websocket)
+
+
+@app.websocket("/ws/agent/{pin}")
+async def websocket_agent_endpoint(websocket: WebSocket, pin: str):
+    """
+    Ingests live telemetry stream from remote client agent.
+    Relays frames in real-time to paired dashboards.
+    """
+    await websocket.accept()
+    room_agents[pin] = websocket
+    print(f"[SysPulse Hub] Agent connected with Device PIN: {pin}")
+
+    # Notify connected dashboards that agent came online
+    dashboards = room_dashboards.get(pin, set())
+    for d in list(dashboards):
+        try:
+            await d.send_json({"type": "agent_status", "status": "online", "pin": pin})
+        except Exception:
+            pass
+
+    try:
+        while True:
+            frame = await websocket.receive_json()
+            room_latest_telemetry[pin] = frame
+
+            # Broadcast to all dashboards monitoring this PIN
+            dashboards = room_dashboards.get(pin, set())
+            disconnected = set()
+            for d in list(dashboards):
+                try:
+                    await d.send_json(frame)
+                except Exception:
+                    disconnected.add(d)
+
+            for d in disconnected:
+                dashboards.discard(d)
+
+    except WebSocketDisconnect:
+        pass
+    finally:
+        room_agents.pop(pin, None)
+        print(f"[SysPulse Hub] Agent disconnected for Device PIN: {pin}")
+        # Notify dashboards of offline state
+        dashboards = room_dashboards.get(pin, set())
+        for d in list(dashboards):
+            try:
+                await d.send_json({"type": "agent_status", "status": "offline", "pin": pin})
+            except Exception:
+                pass
+
+
+@app.websocket("/ws/dashboard/{pin}")
+async def websocket_dashboard_endpoint(websocket: WebSocket, pin: str):
+    """
+    Subscribes a browser dashboard to a specific remote agent device stream.
+    """
+    await websocket.accept()
+    if pin not in room_dashboards:
+        room_dashboards[pin] = set()
+    room_dashboards[pin].add(websocket)
+
+    # Immediately push status & cached telemetry if available
+    is_online = pin in room_agents
+    await websocket.send_json({"type": "agent_status", "status": "online" if is_online else "waiting", "pin": pin})
+
+    if pin in room_latest_telemetry:
+        await websocket.send_json(room_latest_telemetry[pin])
+
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        if pin in room_dashboards:
+            room_dashboards[pin].discard(websocket)
+            if not room_dashboards[pin]:
+                room_dashboards.pop(pin, None)

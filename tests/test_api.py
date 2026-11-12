@@ -60,3 +60,16 @@ def test_pdf_report_endpoint():
     assert len(response.content) > 1000
     assert response.content.startswith(b"%PDF")
 
+def test_device_pairing_endpoints():
+    r_pin = client.get("/api/device/new-pin")
+    assert r_pin.status_code == 200
+    pin = r_pin.json().get("pin")
+    assert pin is not None
+    assert "-" in pin
+
+    r_status = client.get(f"/api/device/{pin}/status")
+    assert r_status.status_code == 200
+    status = r_status.json()
+    assert status["pin"] == pin
+    assert status["online"] is False
+

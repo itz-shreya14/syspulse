@@ -76,6 +76,24 @@ python run.py
 
 ---
 
+## 🌐 Distributed Cloud Hub & Remote Device Monitoring
+
+Want to monitor your laptop from your phone or let a friend monitor their PC? SysPulse operates as a distributed observability hub:
+
+### 1. Deploy the Web Hub to Render (Free)
+SysPulse includes a pre-configured `render.yaml` blueprint. Link your GitHub repository (`itz-shreya14/syspulse`) on [Render.com](https://render.com) as a **Web Service** or Blueprint. It will auto-detect `render.yaml` and deploy in 2 minutes!
+
+### 2. Pair Any Remote Computer in Seconds
+1. Open your cloud dashboard URL (e.g. `https://syspulse-hub.onrender.com`).
+2. Click **"Pair Device"** in the top header to generate a unique 6-digit PIN (e.g., `482-901`).
+3. On the computer you want to monitor, run the lightweight agent:
+   ```bash
+   python agent.py --pin 482-901 --hub https://your-hub.onrender.com
+   ```
+4. **Instant Telemetry:** The cloud dashboard lights up immediately and streams the remote computer's per-core CPU loads, battery curves, and active processes in real time!
+
+---
+
 ## 🛠️ How It Works (Under the Hood)
 
 SysPulse is built with an emphasis on **low overhead (<0.5% CPU)** and clean engineering:
