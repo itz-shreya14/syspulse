@@ -119,6 +119,53 @@ async def root():
     return {"message": "SysPulse Backend is Running. UI index.html not yet initialized."}
 
 
+@app.get("/download/agent.py")
+async def download_agent_py():
+    """Download the standalone single-file client agent script."""
+    agent_path = os.path.join(STATIC_DIR, "agent.py")
+    if not os.path.exists(agent_path):
+        agent_path = os.path.join(BASE_DIR, "agent.py")
+    return FileResponse(agent_path, filename="agent.py", media_type="text/x-python")
+
+
+@app.get("/download/agent.bat")
+async def download_agent_bat(pin: str = "482-901", hub: str = ""):
+    """Generate a 1-click Windows launcher batch script for the agent."""
+    bat_content = f"""@echo off
+title SysPulse Telemetry Agent
+color 0b
+echo ===================================================
+echo     SysPulse Remote Hardware Telemetry Agent
+echo ===================================================
+echo Device Pairing PIN: {pin}
+echo Connecting to Hub: {hub or 'Current Cloud Hub'}
+echo.
+
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo [!] Python is not installed or not in PATH!
+    echo Please install Python from https://python.org or Microsoft Store.
+    pause
+    exit /b 1
+)
+
+echo [*] Checking dependencies (psutil, websockets)...
+python -m pip install psutil websockets --quiet
+
+echo [*] Downloading latest agent script...
+curl -s -O "{hub}/download/agent.py" || powershell -Command "Invoke-WebRequest -Uri '{hub}/download/agent.py' -OutFile 'agent.py'"
+
+echo [*] Starting telemetry stream...
+python agent.py --pin {pin} --hub "{hub}"
+pause
+"""
+    return Response(
+        content=bat_content,
+        media_type="application/x-bat",
+        headers={"Content-Disposition": f'attachment; filename="syspulse_agent_{pin}.bat"'}
+    )
+
+
 # --- REST API Endpoints ---
 
 @app.get("/api/system")

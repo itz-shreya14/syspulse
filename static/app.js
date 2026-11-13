@@ -669,6 +669,36 @@ function closePairingModal() {
   document.getElementById('pairing-modal').classList.add('hidden');
 }
 
+async function downloadOneClickAgent() {
+  if (!currentPin) {
+    try {
+      const res = await fetch('/api/device/new-pin');
+      const data = await res.json();
+      currentPin = data.pin;
+    } catch (e) {
+      currentPin = `${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}`;
+    }
+  }
+
+  const hubUrl = window.location.origin;
+  const downloadUrl = `/download/agent.bat?pin=${encodeURIComponent(currentPin)}&hub=${encodeURIComponent(hubUrl)}`;
+  
+  const a = document.createElement('a');
+  a.href = downloadUrl;
+  a.download = `syspulse_agent_${currentPin}.bat`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  // Switch websocket to listen for this PIN
+  currentWsPath = `/ws/dashboard/${currentPin}`;
+  initWebSocket();
+  const pairLabel = document.getElementById('pairing-btn-label');
+  if (pairLabel) pairLabel.innerText = `PIN: ${currentPin}`;
+
+  showToast(`Agent downloaded! Double-click the .bat file on your PC to connect.`, 'success');
+}
+
 async function checkDeviceStatus() {
   if (!currentPin) return;
   try {

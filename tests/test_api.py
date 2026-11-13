@@ -73,3 +73,13 @@ def test_device_pairing_endpoints():
     assert status["pin"] == pin
     assert status["online"] is False
 
+def test_agent_downloads():
+    r_py = client.get("/download/agent.py")
+    assert r_py.status_code == 200
+    assert "StandaloneCollector" in r_py.text
+
+    r_bat = client.get("/download/agent.bat?pin=123-456&hub=https://test.com")
+    assert r_bat.status_code == 200
+    assert "123-456" in r_bat.text
+    assert "agent.py" in r_bat.text
+
